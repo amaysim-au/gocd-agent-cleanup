@@ -86,7 +86,7 @@ _build: venv requirements.txt
 	sh -c 'source venv/bin/activate && pip install -r requirements.txt'
 	cp -a venv/lib/python3.6/site-packages/. $(PACKAGE_DIR)/
 	cp -a gocd_agent_cleanup/. $(PACKAGE_DIR)/
-	cd $(PACKAGE_DIR) && python -O -m compileall .
+	@cd $(PACKAGE_DIR) && python -O -m compileall -q .
 	cd $(PACKAGE_DIR) && zip -rq ../package .
 
 $(ARTIFACT_PATH): $(DOTENV_TARGET) _build
