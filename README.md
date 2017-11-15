@@ -1,2 +1,3 @@
-# serverless-python-boilerplate
-Boilerplate for creating new Python Serverless projects
+# serverless-gocd-agent-cleanup
+
+This script allows you to cleanup automaticly disconnected agents from GoCD server.
