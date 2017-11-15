@@ -78,9 +78,15 @@ $(DOTENV):
 	cp $(DOTENV) .env
 .PHONY: $(DOTENV)
 
-_build: requirements.txt
-	pip install -r requirements.txt -t $(PACKAGE_DIR)
+venv:
+	virtualenv --python=python3.6 --always-copy venv
+
+_build: venv requirements.txt
+	mkdir -p $(PACKAGE_DIR)
+	sh -c 'source venv/bin/activate && pip install -r requirements.txt'
+	cp -a venv/lib/python3.6/site-packages/. $(PACKAGE_DIR)/
 	cp -a gocd_agent_cleanup/. $(PACKAGE_DIR)/
+	cd $(PACKAGE_DIR) && python -O -m compileall .
 	cd $(PACKAGE_DIR) && zip -rq ../package .
 
 $(ARTIFACT_PATH): $(DOTENV_TARGET) _build
