@@ -98,7 +98,7 @@ node_modules.zip:
 	yarn install --no-bin-links
 	zip -rq node_modules.zip node_modules/
 
-_deploy: $(ARTIFACT_PATH) node_modules.zip
+_deploy: node_modules.zip
 	mkdir -p node_modules
 	unzip -qo -d . node_modules.zip
 	rm -fr .serverless

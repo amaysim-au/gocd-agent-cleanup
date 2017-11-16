@@ -70,3 +70,81 @@ def get_correlation_id(body=None, payload=None, event=None):
     if correlation_id is None:
         correlation_id = str(uuid.uuid4())
     return correlation_id
+
+
+
+
+
+
+
+import requests, base64, json, time
+#from base64 import b64encode
+from pprint import pprint
+
+gocd_base_url = 'https://gocd.amaysim.net/go/api/agents'
+auth_user = 'admin'
+auth_passwd = 'secret'
+headers = {
+        'Accept': 'application/vnd.go.cd.v4+json',
+        'Content-Type': 'application/json'
+}
+
+disable_patch = {
+        "agent_config_state": "Disabled"
+}
+
+
+def gocd_agent_list(uri):
+        try:
+                r = requests.get(url=gocd_base_url, headers=headers, auth=(auth_user, auth_passwd))
+        except:
+                print('Unknown Error')
+        return r.json()
+
+def gocd_agent_disable(uri):
+        try:
+                r = requests.patch(url=gocd_base_url + "/" + uri, headers=headers,data=json.dumps(disable_patch),auth=(auth_user, auth_passwd))
+                #r = requests.patch(url=gocd_base_url + "/" + uri, headers=headers,data=json.dumps({"agent_config_state": "Disabled"}),auth=(auth_user, auth_passwd))
+                #pprint (r.json())
+        except:
+                print('Unknown Error')
+        return r.json()
+
+def gocd_agent_delete(uri):
+        try:
+                r = requests.delete(url=gocd_base_url + "/" + uri, headers=headers, auth=(auth_user, auth_passwd))
+                print(uri + " agent has been removed...")
+        except:
+                print('Unknown Error')
+        return ()
+
+
+def main():
+
+        gocd_data = gocd_agent_list("")
+        gocd_list = gocd_data['_embedded']['agents']
+
+        #pprint (gocd_data)
+
+        for agent in gocd_list:
+                if agent['hostname'] != 'MacMini' and (agent['agent_state'] == 'Missing' or agent['agent_state'] == 'LostContact') and agent['agent_config_state'] == 'Enabled':
+                        print("Disabling " + agent['uuid'] + " it has status : " + agent['agent_state'])
+
+                        #func Disable
+                        gocd_agent_disable(agent['uuid'])
+                        #func Delete
+
+                elif agent['hostname'] != 'MacMini' and agent['agent_config_state'] == 'Disabled':
+                        #print("Deleting " + agent['uuid'])
+                        #func Delete
+                        gocd_agent_delete(agent['uuid'])
+
+
+if __name__ == '__main__':
+    main()
+
+
+
+
+
+
