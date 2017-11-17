@@ -7,6 +7,11 @@ import uuid
 from dateutil.tz import tzlocal
 from dateutil.tz import tzutc
 
+import requests
+#from base64 import b64encode
+from pprint import pprint
+
+
 aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
 logging.info(json.dumps({'message': 'initialising'}))
 aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
@@ -25,6 +30,7 @@ def handler(event, context):
 
     try:
         # do a thing
+        main()
         thing = event
         logging.debug(json.dumps({'message': 'thing', 'status': 'success', 'thing': thing}))
     except:
@@ -71,15 +77,6 @@ def get_correlation_id(body=None, payload=None, event=None):
         correlation_id = str(uuid.uuid4())
     return correlation_id
 
-
-
-
-
-
-
-import requests, base64, json, time
-#from base64 import b64encode
-from pprint import pprint
 
 gocd_base_url = 'https://gocd.amaysim.net/go/api/agents'
 auth_user = 'admin'

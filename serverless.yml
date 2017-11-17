@@ -48,12 +48,12 @@ custom:
 
 functions:
   handler:
-    handler: gocd_agent_cleanup.main
+    handler: gocd_agent_cleanup.handler
     events:
       - schedule: cron(0/10 * * * ? *)
     vpc:
       securityGroupIds:
-        - Ref: LambdaSG
+        - Ref: GoCDAgentClenupLambdaSG
         - ${env:AWS_INTERNET_ACCESS_SG}
       subnetIds:
         - ${env:AWS_SUBNET_A}
@@ -61,22 +61,22 @@ functions:
 
 resources:
   Resources:
-    LambdaSG:
+    GoCDAgentClenupLambdaSG:
       Type: "AWS::EC2::SecurityGroup"
       Properties:
         GroupDescription: "${self:service}-${env:ENV} SG for access to GoCD Server"
         VpcId: ${env:AWS_VPC_ID}
-    CompassSecurityGroupIngress:
+    GoCDSecurityGroupIngress:
       Type: "AWS::EC2::SecurityGroupIngress"
       Properties:
         SourceSecurityGroupId:
-          Fn::GetAtt: [ "LambdaSG", "GroupId" ]
+          Fn::GetAtt: [ "GoCDAgentClenupLambdaSG", "GroupId" ]
         GroupId: "${env:AWS_GOCD_LB_SG}"
         IpProtocol: "tcp"
         FromPort: 443
         ToPort: 443
 
   Outputs:
-    LambdaSGID:
+    GoCDAgentClenupLambdaSGID:
       Value:
-        Fn::GetAtt: [ "LambdaSG", "GroupId" ]
+        Fn::GetAtt: [ "GoCDAgentClenupLambdaSG", "GroupId" ]
