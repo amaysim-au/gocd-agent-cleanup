@@ -49,7 +49,7 @@ run: $(DOTENV_TARGET)
 assumeRole: $(DOTENV_TARGET)
 	docker run --rm -e "AWS_ACCOUNT_ID" -e "AWS_ROLE" amaysim/aws:1.1.3 assume-role.sh >> .env
 
-test: $(DOTENV_TARGET) styleTest unitTest
+test: $(DOTENV_TARGET) styleTest
 
 shell: $(DOTENV_TARGET)
 	docker-compose run $(USER_SETTINGS) --rm lambda-build sh
