@@ -9,18 +9,19 @@ from dateutil.tz import tzutc
 import requests
 from pprint import pprint
 
-
 aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
 logging.info(json.dumps({'message': 'initialising'}))
 aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
 
 gocd_base_url = 'https://gocd.amaysim.net/go/api/agents'
-auth_user = 'admin'
-auth_passwd = 'xxx'
+# auth_user = 'admin'
+# auth_passwd = 'xxx'
+auth_user = os.environ['GOCD_USERNAME']
+auth_passwd = os.environ['GOCD_PASSWORD']
 headers = {
     'Accept': 'application/vnd.go.cd.v4+json',
     'Content-Type': 'application/json',
-    'Correlation-Id': correlation_id
+    'Correlation-Id': 'correlation_id'
 }
 disable_patch = {
     'agent_config_state': 'Disabled'
@@ -133,6 +134,7 @@ def main():
             # print("Deleting " + agent['uuid'])
             # func Delete
             gocd_agent_delete(agent['uuid'])
+
 
 if __name__ == '__main__':
     main()

@@ -15,6 +15,8 @@ provider:
     ENV: ${env:ENV}
     LOGLEVEL: ${env:LOGLEVEL}
     REALM: ${env:REALM}
+    GOCD_USERNAME: ${env:GOCD_USERNAME}
+    GOCD_PASSWORD: ${env:GOCD_PASSWORD}
 
 package:
   artifact: package/package.zip
