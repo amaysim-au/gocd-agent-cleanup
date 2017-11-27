@@ -90,11 +90,11 @@ def handler(event, context):
             # func Disable
             gocd_agent_disable(gocd_base_url, agent['uuid'], headers, disable_patch, auth_user, auth_passwd)
             # func Delete
-            gocd_agent_delete(gocd_base_url, agent['uuid'], headers, disable_patch, auth_user, auth_passwd)
+            gocd_agent_delete(gocd_base_url, agent['uuid'], headers, auth_user, auth_passwd)
 
         elif agent['hostname'] != 'MacMini' and agent['agent_config_state'] == 'Disabled':
             # func Delete
-            gocd_agent_delete(gocd_base_url, agent['uuid'], headers, disable_patch, auth_user, auth_passwd)
+            gocd_agent_delete(gocd_base_url, agent['uuid'], headers, auth_user, auth_passwd)
         else:
             logging.info(json.dumps({'message': 'agent does not need to be disabled or deleted', 'uuid': agent['uuid'], 'state': agent['agent_state']}))
 
