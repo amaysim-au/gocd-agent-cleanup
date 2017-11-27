@@ -52,7 +52,7 @@ functions:
   handler:
     handler: gocd_agent_cleanup.handler
     events:
-      - schedule: cron(0/10 * * * ? *)
+      - schedule: cron(0 */6 * * ? *)
     vpc:
       securityGroupIds:
         - Ref: GoCDAgentClenupLambdaSG
