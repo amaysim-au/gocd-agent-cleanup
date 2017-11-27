@@ -7,62 +7,10 @@ import uuid
 from dateutil.tz import tzlocal
 from dateutil.tz import tzutc
 import requests
-from pprint import pprint
 
 aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
 logging.info(json.dumps({'message': 'initialising'}))
 aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'))
-
-gocd_base_url = 'https://gocd.amaysim.net/go/api/agents'
-# auth_user = 'admin'
-# auth_passwd = 'xxx'
-auth_user = os.environ['GOCD_USERNAME']
-auth_passwd = os.environ['GOCD_PASSWORD']
-headers = {
-    'Accept': 'application/vnd.go.cd.v4+json',
-    'Content-Type': 'application/json',
-    'Correlation-Id': 'correlation_id'
-}
-disable_patch = {
-    'agent_config_state': 'Disabled'
-}
-
-
-def handler(event, context):
-    """Handler for gocd-agent-cleanup"""
-    correlation_id = get_correlation_id(event=event)
-    aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), correlation_id=correlation_id)
-
-    try:
-        logging.debug(json.dumps({'message': 'logging event', 'status': 'success', 'event': event}))
-    except:
-        logging.exception(json.dumps({'message': 'logging event', 'status': 'failed'}))
-        raise
-
-    try:
-        # do a thing
-        main()
-        thing = event
-        logging.debug(json.dumps({'message': 'thing', 'status': 'success', 'thing': thing}))
-    except:
-        logging.exception(json.dumps({"message": "thing", "status": "failed"}))
-        response = {
-            "statusCode": 503,
-            'headers': {
-                'Content-Type': 'application/json',
-            }
-        }
-        return response
-
-    response = {
-        "statusCode": 200,
-        "body": json.dumps(thing),
-        'headers': {
-            'Content-Type': 'application/json',
-        }
-    }
-    logging.info(json.dumps({'message': 'responding', 'response': response}))
-    return response
 
 
 def get_correlation_id(body=None, payload=None, event=None):
@@ -89,52 +37,67 @@ def get_correlation_id(body=None, payload=None, event=None):
     return correlation_id
 
 
-def gocd_agent_list(uri):
+def gocd_agent_list(gocd_base_url, headers, auth_user, auth_passwd):
     try:
         r = requests.get(url=gocd_base_url, headers=headers, auth=(auth_user, auth_passwd))
+        agents = r.json()['_embedded']['agents']
+        logging.info(json.dumps({'message': 'listing agents', 'agents': [x['uuid'] for x in agents], 'reponse': r.status_code}))  # list comprehension filters response to only show agent UUIDs
     except:
-        print('Unknown Error')
-    return r.json()
+        logging.exception(json.dumps({'message': 'listing agents', 'reponse': r.status_code}))
+    return agents
 
 
-def gocd_agent_disable(uri):
+def gocd_agent_disable(gocd_base_url, uri, headers, disable_patch, auth_user, auth_passwd):
     try:
         r = requests.patch(url=gocd_base_url + "/" + uri, headers=headers, data=json.dumps(disable_patch), auth=(auth_user, auth_passwd))
-        # pprint (r.json())
+        logging.info(json.dumps({'message': 'disable agent', 'agent': uri, 'reponse': r.status_code}))
     except:
-        print('Unknown Error')
+        logging.exception(json.dumps({'message': 'disable agent', 'agent': uri, 'reponse': r.status_code}))
     return r.json()
 
 
-def gocd_agent_delete(uri):
+def gocd_agent_delete(gocd_base_url, uri, headers, auth_user, auth_passwd):
     try:
         r = requests.delete(url=gocd_base_url + "/" + uri, headers=headers, auth=(auth_user, auth_passwd))
-        print(uri + " agent has been removed...")
+        logging.info(json.dumps({'message': 'removing agent', 'agent': uri, 'reponse': r.status_code}))
     except:
-        print('Unknown Error')
+        logging.exception(json.dumps({'message': 'removing agent', 'agent': uri, 'reponse': r.status_code}))
     return r.json()
 
 
-def main():
+def handler(event, context):
+    correlation_id = get_correlation_id(event=event)
+    aws_lambda_logging.setup(level=os.environ.get('LOGLEVEL', 'INFO'), env=os.environ.get('ENV'), correlation_id=correlation_id)
 
-    gocd_data = gocd_agent_list("")
-    gocd_list = gocd_data['_embedded']['agents']
+    gocd_base_url = os.environ['GOCD_URL']
+    auth_user = os.environ['GOCD_USERNAME']
+    auth_passwd = os.environ['GOCD_PASSWORD']
+    headers = {
+        'Accept': 'application/vnd.go.cd.v4+json',
+        'Content-Type': 'application/json',
+        'Correlation-Id': correlation_id
+    }
+    disable_patch = {
+        'agent_config_state': 'Disabled'
+    }
 
-    # pprint (gocd_data)
+    gocd_list = gocd_agent_list(gocd_base_url, headers, auth_user, auth_passwd)
+
+    logging.debug(json.dumps({'message': 'logging gocd_data', 'gocd_list': gocd_list}))
 
     for agent in gocd_list:
         if agent['hostname'] != 'MacMini' and (agent['agent_state'] == 'Missing' or agent['agent_state'] == 'LostContact') and agent['agent_config_state'] == 'Enabled':
-            print("Disabling " + agent['uuid'] + " it has status : " + agent['agent_state'])
             # func Disable
-            gocd_agent_disable(agent['uuid'])
+            gocd_agent_disable(gocd_base_url, agent['uuid'], headers, disable_patch, auth_user, auth_passwd)
             # func Delete
-            gocd_agent_delete(agent['uuid'])
+            gocd_agent_delete(gocd_base_url, agent['uuid'], headers, disable_patch, auth_user, auth_passwd)
 
         elif agent['hostname'] != 'MacMini' and agent['agent_config_state'] == 'Disabled':
-            # print("Deleting " + agent['uuid'])
             # func Delete
-            gocd_agent_delete(agent['uuid'])
+            gocd_agent_delete(gocd_base_url, agent['uuid'], headers, disable_patch, auth_user, auth_passwd)
+        else:
+            logging.info(json.dumps({'message': 'agent does not need to be disabled or deleted', 'uuid': agent['uuid'], 'state': agent['agent_state']}))
 
 
 if __name__ == '__main__':
-    main()
+    handler({}, {})
