@@ -17,6 +17,7 @@ provider:
     REALM: ${env:REALM}
     GOCD_USERNAME: ${env:GOCD_USERNAME}
     GOCD_PASSWORD: ${env:GOCD_PASSWORD}
+    GOCD_URL: ${env:GOCD_URL}
 
 package:
   artifact: package/package.zip
