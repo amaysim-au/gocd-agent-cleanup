@@ -40,29 +40,37 @@ def get_correlation_id(body=None, payload=None, event=None):
 def gocd_agent_list(gocd_base_url, headers, auth_user, auth_passwd):
     try:
         r = requests.get(url=gocd_base_url, headers=headers, auth=(auth_user, auth_passwd))
+        r.raise_for_status()
         agents = r.json()['_embedded']['agents']
         logging.info(json.dumps({'message': 'listing agents', 'agents': [x['uuid'] for x in agents], 'reponse': r.status_code}))  # list comprehension filters response to only show agent UUIDs
     except:
         logging.exception(json.dumps({'message': 'listing agents', 'reponse': r.status_code}))
+        raise
     return agents
 
 
 def gocd_agent_disable(gocd_base_url, uri, headers, disable_patch, auth_user, auth_passwd):
     try:
         r = requests.patch(url=gocd_base_url + "/" + uri, headers=headers, data=json.dumps(disable_patch), auth=(auth_user, auth_passwd))
+        r.raise_for_status()
         logging.info(json.dumps({'message': 'disable agent', 'agent': uri, 'reponse': r.status_code}))
+        response = r.json()
     except:
         logging.exception(json.dumps({'message': 'disable agent', 'agent': uri, 'reponse': r.status_code}))
-    return r.json()
+        raise
+    return response
 
 
 def gocd_agent_delete(gocd_base_url, uri, headers, auth_user, auth_passwd):
     try:
         r = requests.delete(url=gocd_base_url + "/" + uri, headers=headers, auth=(auth_user, auth_passwd))
+        r.raise_for_status()
         logging.info(json.dumps({'message': 'removing agent', 'agent': uri, 'reponse': r.status_code}))
+        response = r.json()
     except:
         logging.exception(json.dumps({'message': 'removing agent', 'agent': uri, 'reponse': r.status_code}))
-    return r.json()
+        raise
+    return response
 
 
 def handler(event, context):
