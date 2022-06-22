@@ -2,7 +2,7 @@ service: MV-${env:REALM}-GoCD-Agent-Cleanup
 
 provider:
   name: aws
-  runtime: python3.6
+  runtime: python3.9
   stage: ${env:ENV}
   memorySize: 128
   timeout: 120

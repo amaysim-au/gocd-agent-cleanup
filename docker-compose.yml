@@ -15,7 +15,7 @@ services:
     network_mode: "none"
     working_dir: /code
   lambda:
-    image: lambci/lambda:python3.6
+    image: lambci/lambda:python3.8
     env_file: .env
     volumes:
       - ./package/package:/var/task:Z
@@ -24,7 +24,7 @@ services:
       options:
         gelf-address: "udp://127.0.0.1:12201"
   lambda-build:
-    image: lambci/lambda:build-python3.6
+    image: lambci/lambda:build-python3.8
     env_file: .env
     working_dir: /usr/src/app
     entrypoint: []
