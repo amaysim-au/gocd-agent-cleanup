@@ -2,13 +2,12 @@ service: MV-${env:REALM}-GoCD-Agent-Cleanup
 
 provider:
   name: aws
-  runtime: python3.8
+  runtime: python3.11
   stage: ${env:ENV}
   memorySize: 128
   timeout: 120
   versionFunctions: false
   region: ${env:AWS_REGION}
-  variableSyntax: "\\${(?!AWS::)((?:self|env):[ :a-zA-Z0-9._,\\-\\/\\(\\)]+?)}"
   stackTags:
     FRAMEWORK: serverless
   environment:
@@ -23,12 +22,9 @@ package:
   artifact: package/package.zip
 
 plugins:
-  - serverless-log-forwarding
   - serverless-plugin-aws-alerts
 
 custom:
-  logForwarding:
-    destinationARN: {"Fn::ImportValue": "${env:SUMOLOGIC_LAMBDA_ARN_EXPORT_NAME}"}
   alerts:
     dashboards: true
     topics:

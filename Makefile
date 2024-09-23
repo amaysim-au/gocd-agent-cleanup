@@ -1,58 +1,50 @@
 PACKAGE_DIR=package/package
 ARTIFACT_NAME=package.zip
 ARTIFACT_PATH=package/$(ARTIFACT_NAME)
-ifdef DOTENV
-	DOTENV_TARGET=dotenv
-else
-	DOTENV_TARGET=.env
-endif
 ifdef AWS_ROLE
 	ASSUME_REQUIRED?=assumeRole
 endif
 ifdef GO_PIPELINE_NAME
 	ENV_RM_REQUIRED?=rm_env
-else
-	USER_SETTINGS=--user $(shell id -u):$(shell id -g)
 endif
 
 
 ################
 # Entry Points #
 ################
-deps: $(DOTENV_TARGET)
-	docker-compose run $(USER_SETTINGS) --rm serverless make _deps
+deps: .env
+	docker compose run --rm serverless make _deps
 
-build: $(DOTENV_TARGET)
-	docker-compose run $(USER_SETTINGS) --rm lambda-build make _build
+build: .env _pullPythonLambda
+	docker compose run --rm lambda-build make _build
 
-deploy: $(ENV_RM_REQUIRED) $(DOTENV_TARGET) $(ASSUME_REQUIRED)
-	docker-compose run $(USER_SETTINGS) --rm serverless make _deploy
+deploy: .env $(ENV_RM_REQUIRED) $(ASSUME_REQUIRED)
+	docker compose run --rm serverless make _deploy
 
-logs: $(ENV_RM_REQUIRED) $(DOTENV_TARGET) $(ASSUME_REQUIRED)
-	docker-compose run $(USER_SETTINGS) --rm serverless make _logs
+logs: .env $(ENV_RM_REQUIRED) $(ASSUME_REQUIRED)
+	docker compose run --rm serverless make _logs
 
-unitTest: $(ASSUME_REQUIRED) $(DOTENV_TARGET)
-	docker-compose run $(USER_SETTINGS) --rm lambda gocd_agent_cleanup.unit_test
+smokeTest: .env $(ASSUME_REQUIRED)
+	docker compose run --rm serverless make _smokeTest
 
-smokeTest: $(DOTENV_TARGET) $(ASSUME_REQUIRED)
-	docker-compose run $(USER_SETTINGS) --rm serverless make _smokeTest
+remove: .env
+	docker compose run --rm serverless make _deps _remove
 
-remove: $(DOTENV_TARGET)
-	docker-compose run $(USER_SETTINGS) --rm serverless make _deps _remove
+styleTest: .env
+	docker compose run --rm pep8 --ignore 'E501,E128' gocd_agent_cleanup/*.py
 
-styleTest: $(DOTENV_TARGET)
-	docker-compose run $(USER_SETTINGS) --rm pep8 --ignore 'E501,E128' gocd_agent_cleanup/*.py
+run: .env deps build _pullPythonLambda
+	docker compose up --wait --detach lambda-run
+	docker exec -it gocd-agent-cleanup-lambda-run-1 curl -f -s "http://127.0.0.1:8080/2015-03-31/functions/function/invocations" -d '' -v
+	if [[ "$$?" -eq "0" ]]; then echo "Pass" && docker compose down; else echo "Fail" && docker compose down && false; fi
 
-run: $(DOTENV_TARGET)
-	docker-compose run $(USER_SETTINGS) --rm lambda gocd_agent_cleanup.handler
-
-assumeRole: $(DOTENV_TARGET)
+assumeRole: .env
 	docker run --rm -e "AWS_ACCOUNT_ID" -e "AWS_ROLE" amaysim/aws:1.1.3 assume-role.sh >> .env
 
-test: $(DOTENV_TARGET) styleTest
+test: styleTest
 
-shell: $(DOTENV_TARGET)
-	docker-compose run $(USER_SETTINGS) --rm lambda-build sh
+shell: .env _pullPythonLambda
+	docker compose run --rm lambda-build sh
 
 ##########
 # Others #
@@ -68,28 +60,18 @@ rm_env:
 	@echo "Create .env with .env.template"
 	cp .env.template .env
 
-# Create/Overwrite .env with $(DOTENV)
-dotenv:
-	@echo "Overwrite .env with $(DOTENV)"
-	cp $(DOTENV) .env
-
-$(DOTENV):
-	$(info overwriting .env file with $(DOTENV))
-	cp $(DOTENV) .env
-.PHONY: $(DOTENV)
-
 venv:
-	virtualenv --python=python3.8 --always-copy venv
+	python3.11 -m venv --copies venv
 
 _build: venv requirements.txt
 	mkdir -p $(PACKAGE_DIR)
 	sh -c 'source venv/bin/activate && pip install -r requirements.txt'
-	cp -a venv/lib/python3.8/site-packages/. $(PACKAGE_DIR)/
+	cp -a venv/lib/python3.11/site-packages/. $(PACKAGE_DIR)/
 	cp -a gocd_agent_cleanup/. $(PACKAGE_DIR)/
 	@cd $(PACKAGE_DIR) && python -O -m compileall -q .
 	cd $(PACKAGE_DIR) && zip -rq ../package .
 
-$(ARTIFACT_PATH): $(DOTENV_TARGET) _build
+$(ARTIFACT_PATH): .env _build
 
 # Install node_modules for serverless plugins
 _deps: node_modules.zip
@@ -102,7 +84,7 @@ _deploy: node_modules.zip
 	mkdir -p node_modules
 	unzip -qo -d . node_modules.zip
 	rm -fr .serverless
-	sls deploy -v
+	sls deploy --verbose
 
 _smokeTest:
 	sls invoke -f handler
@@ -111,9 +93,18 @@ _logs:
 	sls logs -f handler --startTime 5m -t
 
 _remove:
-	sls remove -v
+	sls remove --verbose
 	rm -fr .serverless
 
 _clean:
 	rm -fr node_modules.zip node_modules .serverless package .requirements venv/ run/ __pycache__/
+	docker rmi -f gocd-agent-cleanup-lambda-build:latest
 .PHONY: _deploy _remove _clean
+
+_dockerLoginPublicECR: .env
+	aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+.PHONY: _dockerLoginPublicECR
+
+_pullPythonLambda: _dockerLoginPublicECR
+	docker pull public.ecr.aws/lambda/python:3.11
+.PHONY: _pullPythonLambda
