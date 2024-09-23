@@ -18,10 +18,10 @@ deps: .env
 build: .env _pullPythonLambda
 	docker compose run --rm lambda-build make _build
 
-deploy: .env $(ENV_RM_REQUIRED) $(ASSUME_REQUIRED)
+deploy: $(ENV_RM_REQUIRED) .env $(ASSUME_REQUIRED)
 	docker compose run --rm serverless make _deploy
 
-logs: .env $(ENV_RM_REQUIRED) $(ASSUME_REQUIRED)
+logs: $(ENV_RM_REQUIRED) .env $(ASSUME_REQUIRED)
 	docker compose run --rm serverless make _logs
 
 smokeTest: .env $(ASSUME_REQUIRED)
